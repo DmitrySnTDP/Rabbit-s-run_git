@@ -62,7 +62,7 @@ def menu():
     elif diff_coef == 1.5:
         old_r_s,old_r_a,old_r_l = saves_old[3]
 
-    canvas.create_image(640,360,image=fone_menu)
+    canvas.create_image(640,360,image = fone_menu)
     canvas.create_text(640,50,text = 'Кроличий побег',font = ('Arial',30),fill = 'yellow')
 
     small_g = Button(image = small_run,highlightthickness = 0,command = small_G)
