@@ -1,8 +1,8 @@
-from pygame import * 
+from pygame import *
 from random import randint
 from datetime import datetime
-import sys
-
+# import app
+# import sys
 
 width = 1280
 height = 720
@@ -52,6 +52,35 @@ reset_save_img = image.load('image/reset_save.png')
 #     def draw_button():
 #         if button_press:
 
+# b = Button(text='Button')
+
+class Scene:
+    # Create a new scene (room, level, view).
+    id = 0
+    bg = Color('gray')
+
+    def __init__(self, *args, **kwargs):
+        global App
+        # Append the new scene and make it the current scene
+        App = []
+        App.scenes.append(self)
+        App.scene = self
+        # Set the instance id and increment the class id
+        self.id = Scene.id
+        Scene.id += 1
+        self.nodes = []
+        self.bg = Scene.bg
+    
+    def draw(self):
+# Draw all objects in the scene.
+        App.screen.fill(self.bg)
+        for node in self.nodes:
+            node.draw()
+            display.flip()
+    def __str__(self):
+        return 'Scene {}'.format(self.id)
+
+
 
 
 class Rabbit(sprite.Sprite):
@@ -68,7 +97,6 @@ class Rabbit(sprite.Sprite):
         
 
 # текст: window.blit(font.SysFont("Arial", 30).render('', True, (255,255,0)), (100, 100))
-
 # def kurs(event):
 #     global k_x,k_y
 #     k_x = event.x
@@ -206,9 +234,7 @@ while True:
     clock.tick(default_framerate)
     for even_t in event.get():
         if even_t.type == QUIT:
-            pass
             quit()
-            sys.exit()
 
     if run_status == 'menu':
         menu()
@@ -226,4 +252,3 @@ while True:
     
     
     display.flip()
-    
