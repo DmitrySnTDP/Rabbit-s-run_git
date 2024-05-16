@@ -101,7 +101,6 @@ def long_G():
 def go_game(lenn):
     global rabb,n,s,start
     rabb = [Rabbit(canvas) for i in range(lenn)]
-    print(len(rabb))
     n = 0
     s = 0
     start = datetime.now().strftime('%S.%f')

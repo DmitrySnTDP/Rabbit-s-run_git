@@ -1,147 +1,178 @@
 from pygame import *
 from random import randint
 from datetime import datetime
-# import app
-# import sys
 
 width = 1280
 height = 720
-default_framerate = 60
-diff_coef = 1
-indexx = 0
-n = 0
+framerate = 30
+diff_coef = indexx = 1 
+last_edit_difficult = last_del_save = 0
 k_x = 0
 k_y = 0
-n = 0
 init()
 # mixer.init() #звук
 window = display.set_mode((width, height))
+check_bar_list = ['', '•', '', '']
 display.set_caption('Кроличий побег')
 clock = time.Clock()
 
 fone = image.load('image/foneHD.png')
 fone_menu = image.load('image/foneHD_blur.png')
-small_run_status = image.load('image/little_game1.png')
-average_run_status = image.load('image/average_game1.png')
-long_run_status = image.load('image/long_game1.png')
-regulat = image.load('image/reg1.png')
-v_menu = image.load('image/v_menu1.png')
-v_set = image.load('image/settings.png')
-default_img = image.load('image/default.png')
-easy_img = image.load('image/easy.png')
-medium_img = image.load('image/medium.png')
-hard_img = image.load('image/hard.png')
-save_set_img = image.load('image/save_set.png')
-reset_save_img = image.load('image/reset_save.png')
+rabbit_img = image.load('image/rabbit1.png')
 
 
-# class Button:
-#     def __init__(self, x, y, width, height, color, text):
-#         self.x = x
-#         self.y = y
-#         self.width = width
-#         self.height = height
-#         self.color = color
-#         self.text = text
-    
-#     def draw(self, window):
-#         pass
-#     def update_button(self):
-#         pass
-    
-#     def draw_button():
-#         if button_press:
+class Button:
+    def __init__(self, width, height = 40, left_indent = 0, top_ident = 5):
+        self.width = width
+        self.height = height
+        self.left_indent = left_indent
+        self.top_indent = top_ident
+        self.fone = Surface((self.width, self.height))
+        self.fone.fill((255,255,255))
+        self.fone.set_alpha(0)
 
-# b = Button(text='Button')
+    def draw(self, x, y, text, command = None, dat = None):
+        cursor = mouse.get_pos()
+        click = mouse.get_pressed()
 
-class Scene:
-    # Create a new scene (room, level, view).
-    id = 0
-    bg = Color('gray')
+        if x < cursor[0] < x + self.width:
+            if y < cursor[1] < y + self.height:
+                self.fone.set_alpha(150)
 
-    def __init__(self, *args, **kwargs):
-        global App
-        # Append the new scene and make it the current scene
-        App = []
-        App.scenes.append(self)
-        App.scene = self
-        # Set the instance id and increment the class id
-        self.id = Scene.id
-        Scene.id += 1
-        self.nodes = []
-        self.bg = Scene.bg
-    
-    def draw(self):
-# Draw all objects in the scene.
-        App.screen.fill(self.bg)
-        for node in self.nodes:
-            node.draw()
-            display.flip()
-    def __str__(self):
-        return 'Scene {}'.format(self.id)
+                if click[0] and command != None:
+                    if dat != None:
+                        command(dat)
+                    else:
+                        command()
 
-
+        self.rect = self.fone.get_rect()
+        self.rect.center = ((x, y))
+        window.blit(self.fone, (x, y))
+        print_text(text, x + self.top_indent, y + self.left_indent)
 
 
 class Rabbit(sprite.Sprite):
     def __init__(self):
         sprite.Sprite.__init__(self)
         global diff_coef
-        self.speed = randint(5, 10) * diff_coef
-        self.image = image.load('image/rabbit1.png')
+        self.speed = randint(10, 15) * diff_coef
+        self.image = rabbit_img
         self.rect = self.image.get_rect()
-        self.rect.center = (50, 525 + randint(0, 95))
+        self.rect.center = (-50, 525 + randint(0, 95))
 
     def update(self):
         self.rect.x += self.speed
         
 
-# текст: window.blit(font.SysFont("Arial", 30).render('', True, (255,255,0)), (100, 100))
+def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30):
+    font_type = font.SysFont(font_type, font_size)
+    text = font_type.render(message, True, font_color)
+    window.blit(text, (x, y))
+
 # def kurs(event):
 #     global k_x,k_y
 #     k_x = event.x
 #     k_y = event.y
 
 
-def menu():
-    global old_r_s, old_r_a, old_r_l,saves_old, run_status
-    saves_old = []
+def menu():    
+    window.blit(fone_menu, (0, 0))
+    Button(217).draw(210, 150,'Небольшой побег', small_G)
+    Button(185).draw(225, 225, 'Средний побег', average_G)
+    Button(187).draw(225, 300, 'Большой побег', long_G)
+    Button(110).draw(902, 188, 'Правила', to_regulation)
+    Button(132).draw(892, 265, 'Настройки', to_settings)
+    print_text('Кроличий побег', 545, 50)
+    print_text(f'Рекорд: {old_r_s}', 565, 150)
+    print_text(f'Рекорд: {old_r_a}', 565, 225)
+    print_text(f'Рекорд: {old_r_l}', 565, 300)    
 
-    with open('save_records.txt') as saves:
+
+def regulation():
+    window.blit(fone_menu, (0, 0))
+    Button(95).draw(10, 10, 'В меню', to_menu)
+    print_text('Суть игры в том, чтобы поймать как можно больше сбегающих с фермы кроликов.', 150, 285)
+    print_text('Они бегут друг за другом. За каждого пойманного кролика вы получаете от 5 до 150 очков,', 105, 335)
+    print_text(' в зависимоти от времени, за которе вы его поймали. Во время небольшого побега сбегает', 100, 385)
+    print_text('25 кроликов, во время среднего 50 кроликов, а во время большого 75 кроликов.', 167, 435)
+
+
+def settings():
+    global last_change
+    window.blit(fone_menu, (0, 0))
+    Button(95).draw(10, 10, 'В меню', to_menu)
+    Button(75).draw(283, 100, 'Легко', change,  '0.75')
+    Button(180).draw(227, 175, 'По умолчанию', change, '1')
+    Button(100).draw(268, 250, 'Средне', change, '1.25')
+    Button(100).draw(270, 325, 'Сложно', change, '1.5')
+    Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
+    print_text(check_bar_list[0], 210, 90, font_size = 50)
+    print_text(check_bar_list[1], 210, 165, font_size = 50)
+    print_text(check_bar_list[2], 210, 240, font_size = 50)
+    print_text(check_bar_list[3], 210, 315, font_size = 50)
+    now = int(datetime.now().strftime('%S'))
+    if last_change != indexx and (now - int(last_edit_difficult)) < 1:
+        print_text('Сложность изменена!', 190, 475)
+    elif now - int(last_del_save) < 1:
+        print_text('Сохранения сброшены!', 179, 475)
+    elif last_change != indexx:
+        last_change = indexx
+
+    
+
+def del_save():
+    global saves_old, last_del_save
+    saves_old = [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
+    last_del_save = datetime.now().strftime('%S')
+    with open('save_records.txt','w') as saves_w:
         for i in range(4):
-            save_old = []
-            for j in range(3):
-                save_old.append(int(saves.readline()))
-            saves_old.append(save_old)
+            saves_w.write(f'0|0|0\n')
+    
 
-    if diff_coef == 1:
-        old_r_s,old_r_a,old_r_l = saves_old[0]
-    elif diff_coef == 0.75:
-        old_r_s,old_r_a,old_r_l = saves_old[1]
-    elif diff_coef == 1.25:
-        old_r_s,old_r_a,old_r_l = saves_old[2]
-    elif diff_coef == 1.5:
-        old_r_s,old_r_a,old_r_l = saves_old[3]
+def change(n):
+    global diff_coef, indexx, last_edit_difficult, check_bar_list
+    diff_coef = float(n)
+    check_bar_list = ['', '', '', '']
+    if n == '0.75':
+        indexx = 0
+    elif n == '1':
+        indexx = 1
+    elif n == '1.25':
+        indexx = 2
+    elif n == '1.5':
+        indexx = 3
+    check_bar_list[indexx] = '•'
+    last_edit_difficult = datetime.now().strftime('%S')
 
-    window.blit(fone_menu, (0,0))
-    run_status = 'go_game'
+
+def small_G():
+    go_game(25)
+
+def average_G():
+    go_game(50)
+
+def long_G():
+    go_game(75)
+
 
 def go_game(lenn):
-    global n, s, start, all_sprites, run_status, max_n, rabbit
-    all_sprites = sprite.Group()
+    global n, s, start, all_sprites, run_status, max_n, rabbit, framerate
+
     rabbit = Rabbit()
+    all_sprites = sprite.Group()
     all_sprites.add(rabbit)
     n = s = 0
     max_n = lenn
-    start = datetime.now().strftime('%S.%f')
     run_status = 'game'
+    framerate = 60
+    start = datetime.now().strftime('%S.%f')
 
 
 def game():
-    global k_x, k_y, n, s, start, all_sprites, run_status, rabbit, old_r
+    global n, s, start, all_sprites, run_status, rabbit, old_r, framerate
 
     window.blit(fone, (0,0))
-    window.blit(font.SysFont("Arial", 35).render(str(s) , True, (255,165,0)), (610, 25))
+    window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (612, 25))
 
     if rabbit.rect.x >= 1330:
         n += 1
@@ -150,8 +181,8 @@ def game():
             rabbit = Rabbit()
             all_sprites.add(rabbit)
 
-
         start = datetime.now().strftime('%S.%f')
+
     elif rabbit.rect.x - 50 <= k_x and rabbit.rect.x + 50 >= k_x and rabbit.rect.y - 50 <= k_y and rabbit.rect.y + 50 >= k_y:
         n += 1
         if n < max_n:
@@ -181,6 +212,7 @@ def game():
     
     if n == max_n:
         run_status = 'game_over'
+        framerate = 30
         if n == 25:
             old_r = old_r_s
         elif n == 50:
@@ -197,8 +229,7 @@ def game():
                 saves_old[indexx][2] = s
                 
             for saves_new in saves_old:
-                for save_new in saves_new:
-                    saves1.write(str(save_new) + '\n')
+                    saves1.write(f'{saves_new[0]}|{saves_new[1]}|{saves_new[2]}\n')
 
     
     # else:
@@ -208,47 +239,53 @@ def game():
 
 
 def to_menu():
-    global run_status
+    global run_status, old_r_a, old_r_l, old_r_s
+    old_r_s, old_r_a, old_r_l = saves_old[indexx]
     run_status = 'menu'
+
+def to_regulation():
+    global run_status
+    run_status = 'regulation'
+
+def to_settings():
+    global run_status, last_change
+    last_change = indexx
+    run_status = 'settings'
 
 
 def game_over():
-    window.blit(fone_menu,(0, 0))
-    window.blit(font.SysFont("Arial", 30).render('Рекорд:', True, (255,255,0)), (575, 125))
-    window.blit(font.SysFont("Arial", 30).render(str(old_r), True, (255,255,0)), (735, 125))
-    window.blit(font.SysFont("Arial", 30).render('Очки:', True, (255,255,0)), (595, 175))
-    window.blit(font.SysFont("Arial", 30).render(str(s), True, (255,255,0)), (735, 175))
-    window.blit(font.SysFont("Arial", 30).render('Игра окончена', True, (255,255,0)), (int(width*0.45), 50))
-
-    rectt = Rect(50,50,100,100)
-    surf = Surface(rectt.size, SRCALPHA)
-    draw.rect(surf, (100,0,0), rectt)
-    # Vmenu = Button(image = v_menu,highlightthickness = 0,command = to_menu)
-    # canvas.create_window((10,10), anchor = "nw", window = Vmenu)
+    window.blit(fone_menu, (0, 0))
+    window.blit(font.SysFont("Arial", 30).render('Игра окончена', True, (255,255,0)), (555, 50))
+    window.blit(font.SysFont("Arial", 30).render(f'Рекорд: {str(old_r)}', True, (255,255,0)), (570, 125))
+    window.blit(font.SysFont("Arial", 30).render(f'Очки: {str(s)}', True, (255,255,0)), (580, 175))
+    
+    Button(95).draw(10, 10, 'В меню', to_menu)
     
 
 all_sprites = sprite.Group()
-button_sprites = sprite.Group()
-run_status = 'menu'
+with open('save_records.txt') as f:
+    saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
+
+to_menu()
+
 while True:
-    clock.tick(default_framerate)
+    clock.tick(framerate)
     for even_t in event.get():
         if even_t.type == QUIT:
-            quit()
+            quit()        
 
     if run_status == 'menu':
         menu()
-    elif run_status == 'go_game':
-        go_game(1)
     elif run_status == 'game':
+        framerate = 60
         game()
         all_sprites.update()
         all_sprites.draw(window)
     elif run_status == 'game_over':
         game_over()
-
-
-    
-    
+    elif run_status == 'regulation':
+        regulation()
+    elif run_status == 'settings':
+        settings()
     
     display.flip()
