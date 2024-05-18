@@ -1,0 +1,1 @@
+pyinstaller game.py -F -i rab.ico -w -D
