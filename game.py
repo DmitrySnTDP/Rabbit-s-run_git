@@ -1,4 +1,4 @@
-from pygame import init, display, time, image, mouse, Surface, sprite, font, event, mixer, QUIT
+from pygame import init, display, time, image, mouse, Surface, sprite, font, event, mixer, QUIT, quit
 from random import randint
 from datetime import datetime
 
