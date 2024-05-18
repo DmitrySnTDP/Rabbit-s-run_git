@@ -11,7 +11,6 @@ last_edit_difficult = last_del_save = k_x = k_y = 0
 init()
 # mixer.init() #звук
 window = display.set_mode((width, height))
-check_bar_list = ['', '•', '', '']
 display.set_caption('Кроличий побег')
 clock = time.Clock()
 
@@ -108,11 +107,11 @@ def settings(run_s = None):
     print_text(check_bar_list[1], 210, 165, font_size = 50)
     print_text(check_bar_list[2], 250, 240, font_size = 50)
     print_text(check_bar_list[3], 250, 315, font_size = 50)
-    now = int(datetime.now().strftime('%S'))
+    now = float(datetime.now().strftime('%S.%f'))
 
-    if last_change != indexx and (now - int(last_edit_difficult)) < 1:
+    if last_change != indexx and (now - last_edit_difficult) < 1.0:
         print_text('Сложность изменена!', 190, 475)
-    elif now - int(last_del_save) < 1:
+    elif now - last_del_save < 1:
         print_text('Сохранения сброшены!', 179, 475)
     elif last_change != indexx:
         last_change = indexx
@@ -130,10 +129,11 @@ def check_run(run_s, last_c = None):
 def del_save():
     global saves_old, last_del_save
     saves_old = [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
-    last_del_save = datetime.now().strftime('%S')
+    last_del_save = float(datetime.now().strftime('%S.%f'))
     with open('save_records.txt','w') as saves_w:
         for i in range(4):
             saves_w.write(f'0|0|0\n')
+        saves_w.write(str(indexx))
 
 
 def write_save():
@@ -157,7 +157,7 @@ def change(k):
         indexx = 3
     write_save()
     check_bar_list[indexx] = '•'
-    last_edit_difficult = datetime.now().strftime('%S')
+    last_edit_difficult = float(datetime.now().strftime('%S.%f'))
 
 
 def go_game(lenn):
@@ -229,6 +229,8 @@ all_sprites = sprite.Group()
 with open('save_records.txt') as f:
     saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
     indexx = int(f.readline())
+check_bar_list = ['', '', '', '']
+check_bar_list[indexx] = '•'
 menu('menu')
 
 while True:
