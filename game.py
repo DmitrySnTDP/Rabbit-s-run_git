@@ -1,4 +1,5 @@
-from pygame import init, display, time, image, mouse, Surface, sprite, font, event, mixer, QUIT, quit
+from pygame import *
+# init, display, time, image, mouse, Surface, sprite, font, event, mixer, QUIT, quit
 from random import randint
 from datetime import datetime
 from sys import exit
@@ -8,8 +9,11 @@ height = 720
 framerate = 45
 diff_coef = 1
 last_edit_difficult = last_del_save = k_x = k_y = 0
+check_mouse_on_button = check_mouse_click_button = False
+last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 init()
-# mixer.init() #звук
+mixer.init()
+mixer.set_num_channels(2)
 window = display.set_mode((width, height))
 display.set_caption('Кроличий побег')
 clock = time.Clock()
@@ -18,8 +22,14 @@ fone = image.load('image/foneHD.png')
 fone_menu = image.load('image/foneHD_blur.png')
 rabbit_img = image.load('image/rabbit1.png')
 
+rabbit_pick_up = 'rabbit_pick_up.wav'
+on_button = 'on_button.wav'
+click_button = 'click_button.wav'
+# music = 'music.wav'
+
 
 class Button:
+    global check_mouse_on_button
     def __init__(self, width, height = 40, left_indent = 0, top_indent = 5):
         self.width = width
         self.height = height
@@ -30,18 +40,36 @@ class Button:
         self.fone.set_alpha(0)
 
     def draw(self, x, y, text, command = None, dat = None):
+        global check_mouse_on_button, last_coords_mouse, check_mouse_click_button, last_coords_click_but
         cursor = mouse.get_pos()
         click = mouse.get_pressed()
 
         if x < cursor[0] < x + self.width:
             if y < cursor[1] < y + self.height:
                 self.fone.set_alpha(150)
+                if not check_mouse_on_button:
+                    check_mouse_on_button = True
+                    play_sound(on_button, 1)
+                    last_coords_mouse = [x, y, self.width, self.height]
 
-                if click[0] and command != None:
+                if click[0] and command != None and (not check_mouse_click_button):
+                    play_sound(click_button, 1)
+                    check_mouse_click_button = True
+                    last_coords_click_but = [x, y, self.width, self.height]
+
                     if dat != None:
                         command(dat)
                     else:
                         command()
+
+        if not (last_coords_mouse[0] < cursor[0] < last_coords_mouse[0] + last_coords_mouse[2] and\
+                last_coords_mouse[1] < cursor[1] < last_coords_mouse[1] + last_coords_mouse[3]):
+            check_mouse_on_button = False
+        
+        if (not (last_coords_click_but[0] < cursor[0] < last_coords_click_but[0] + last_coords_click_but[2] and\
+        last_coords_click_but[1] < cursor[1] < last_coords_click_but[1] + last_coords_click_but[3])) or (not click[0]):
+            check_mouse_click_button = False
+        
 
         self.rect = self.fone.get_rect()
         self.rect.center = ((x, y))
@@ -61,6 +89,8 @@ class Rabbit(sprite.Sprite):
     def update(self):
         self.rect.x += self.speed
         
+def play_sound(sound,channel):
+    mixer.Channel(channel).play(mixer.Sound(f'sounds/{sound}'))
 
 def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30):
     font_type = font.SysFont(font_type, font_size)
@@ -185,7 +215,7 @@ def game():
 
     elif rabbit.rect.x <= k_x and rabbit.rect.x + 100 >= k_x and rabbit.rect.y <= k_y and rabbit.rect.y + 100 >= k_y:
         check = True
-
+        play_sound(rabbit_pick_up, 1)
         end = datetime.now().strftime('%S.%f')
         times = (float(end) - float(start)) * diff_coef
         start = end
