@@ -3,18 +3,18 @@ from pygame import *
 from random import randint
 from datetime import datetime
 from sys import exit
+from screeninfo import get_monitors
 
-width = 1280
-height = 720
+last_size = (1280, 720)
+diff_coef = scale = 1
 framerate = 45
-diff_coef = 1
 last_edit_difficult = last_del_save = k_x = k_y = 0
-check_mouse_on_button = check_mouse_click_button = False
+check_mouse_on_button = check_mouse_click_button = is_fullscreen = check_maximized = to_fullscreen = False
 last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 init()
 mixer.init()
 mixer.set_num_channels(2)
-window = display.set_mode((width, height))
+window = display.set_mode((1280, 720))
 display.set_caption('Кроличий побег')
 clock = time.Clock()
 
@@ -27,12 +27,12 @@ on_button = 'on_button.wav'
 click_button = 'click_button.wav'
 # music = 'music.wav'
 
-
 class Button:
     global check_mouse_on_button
+
     def __init__(self, width, height = 40, left_indent = 0, top_indent = 5):
-        self.width = width
-        self.height = height
+        self.width = int(width * scale)
+        self.height = int(height * scale)
         self.left_indent = left_indent
         self.top_indent = top_indent
         self.fone = Surface((self.width, self.height))
@@ -41,6 +41,8 @@ class Button:
 
     def draw(self, x, y, text, command = None, dat = None):
         global check_mouse_on_button, last_coords_mouse, check_mouse_click_button, last_coords_click_but
+
+        x, y = int(x * scale), int(y * scale)
         cursor = mouse.get_pos()
         click = mouse.get_pressed()
 
@@ -69,33 +71,76 @@ class Button:
         if (not (last_coords_click_but[0] < cursor[0] < last_coords_click_but[0] + last_coords_click_but[2] and\
         last_coords_click_but[1] < cursor[1] < last_coords_click_but[1] + last_coords_click_but[3])) or (not click[0]):
             check_mouse_click_button = False
-        
 
         self.rect = self.fone.get_rect()
         self.rect.center = ((x, y))
         window.blit(self.fone, (x, y))
-        print_text(text, x + self.top_indent, y + self.left_indent)
+        print_text(text, int(x / scale) + self.top_indent, int(y / scale) + self.left_indent)
 
 
 class Rabbit(sprite.Sprite):
     def __init__(self):
         sprite.Sprite.__init__(self)
         global diff_coef
-        self.speed = randint(22, 30) * diff_coef
+
+        self.speed = randint(22, 30) * diff_coef * scale
         self.image = rabbit_img
         self.rect = self.image.get_rect()
-        self.rect.center = (-50, 525 + randint(0, 95))
+        self.rect.center = (int(-50 * scale), int((525 + randint(0, 95)) * scale))
 
     def update(self):
         self.rect.x += self.speed
-        
+
+
 def play_sound(sound,channel):
     mixer.Channel(channel).play(mixer.Sound(f'sounds/{sound}'))
 
+
 def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30):
-    font_type = font.SysFont(font_type, font_size)
+    font_type = font.SysFont(font_type, int(font_size * scale))
     text = font_type.render(message, True, font_color)
-    window.blit(text, (x, y))
+    window.blit(text, (int(x * scale), int(y * scale)))
+
+
+def fullscreen():
+    global scale, window, is_fullscreen, last_scale, to_fullscreen
+    
+    if not is_fullscreen:
+        to_fullscreen = is_fullscreen = True
+        last_scale = scale
+        scale = size_monitor[0] / 1280
+        window = display.set_mode((int(1280 * scale), int(720 * scale)), FULLSCREEN)
+    else:
+        scale = last_scale
+        is_fullscreen = False
+        window = display.set_mode((int(1280 * scale), int(720 * scale)), RESIZABLE)
+    transform_img()
+
+
+def resize_window(size = (1280, 720), vres = False):
+    global window, scale
+
+    if size[0] < 480:
+        scale = 480 / 1280
+    else:
+        scale = size[0] / 1280
+
+    if not vres:
+        window = display.set_mode((1280 * scale, 720 * scale), RESIZABLE)
+    transform_img()
+
+
+def transform_img():
+    global fone, fone_menu, rabbit_img
+
+    fone = transform.scale(image.load('image/foneHD.png'), (int(1280 * scale), int(720 * scale)))
+    fone_menu = transform.scale(image.load('image/foneHD_blur.png'), (int(1280 * scale), int(720 * scale)))
+    rabbit_img =  transform.scale(image.load('image/rabbit1.png'), (int(100 * scale), int(95 * scale)))
+
+
+def go_exit():
+    quit()
+    exit()
 
 
 def menu(run_s = None):
@@ -106,10 +151,11 @@ def menu(run_s = None):
     Button(187).draw(225, 300, 'Большой побег', go_game, 75)
     Button(110).draw(902, 188, 'Правила', regulation, 'regulation')
     Button(132).draw(892, 265, 'Настройки', settings, 'settings')
+    Button(85).draw(575, 450, 'Выход', go_exit)
     print_text('Кроличий побег', 545, 50)
     print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150)
     print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225)
-    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)    
+    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)   
 
 
 def regulation(run_s = None):
@@ -133,10 +179,14 @@ def settings(run_s = None):
     Button(100).draw(268, 250, 'Средне', change, '1.25')
     Button(100).draw(270, 325, 'Сложно', change, '1.5')
     Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
+    Button(175).draw(920, 100, 'Полный экран', fullscreen)
     print_text(check_bar_list[0], 265, 90, font_size = 50)
     print_text(check_bar_list[1], 210, 165, font_size = 50)
     print_text(check_bar_list[2], 250, 240, font_size = 50)
     print_text(check_bar_list[3], 250, 315, font_size = 50)
+
+    if is_fullscreen:
+        print_text('•', 900, 90, font_size = 50)
     now = float(datetime.now().strftime('%S.%f'))
 
     if last_change != indexx and (now - last_edit_difficult) < 1.0:
@@ -158,8 +208,10 @@ def check_run(run_s, last_c = None):
 
 def del_save():
     global saves_old, last_del_save
+
     saves_old = [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
     last_del_save = float(datetime.now().strftime('%S.%f'))
+
     with open('save_records.txt','w') as saves_w:
         for i in range(4):
             saves_w.write(f'0|0|0\n')
@@ -170,11 +222,13 @@ def write_save():
     with open('save_records.txt', 'w') as saves1:
         for saves_new in saves_old:
             saves1.write(f'{saves_new[0]}|{saves_new[1]}|{saves_new[2]}\n')
+
         saves1.write(str(indexx))
 
 
 def change(k):
     global diff_coef, indexx, last_edit_difficult, check_bar_list
+
     diff_coef = float(k)
     check_bar_list = ['', '', '', '']
     if k == '0.75':
@@ -185,6 +239,7 @@ def change(k):
         indexx = 2
     elif k == '1.5':
         indexx = 3
+
     write_save()
     check_bar_list[indexx] = '•'
     last_edit_difficult = float(datetime.now().strftime('%S.%f'))
@@ -209,7 +264,7 @@ def game():
     window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (612, 25))
     check = False
 
-    if rabbit.rect.x >= 1330:
+    if rabbit.rect.x >= 1330 * scale:
         check = True
         start = datetime.now().strftime('%S.%f')
 
@@ -238,7 +293,6 @@ def game():
     if n == max_n:
         run_status = 'game_over'
 
-        
         old_r = saves_old[indexx][(n // 25) - 1]
         if s >= saves_old[indexx][(n // 25) - 1]:
             saves_old[indexx][(n // 25 - 1)] = s
@@ -249,26 +303,53 @@ def game():
 
 def game_over():
     window.blit(fone_menu, (0, 0))
-    window.blit(font.SysFont("Arial", 30).render('Игра окончена', True, (255,255,0)), (555, 50))
-    window.blit(font.SysFont("Arial", 30).render(f'Рекорд: {str(old_r)}', True, (255,255,0)), (570, 125))
-    window.blit(font.SysFont("Arial", 30).render(f'Очки: {str(s)}', True, (255,255,0)), (580, 175))
+    print_text('Игра окончена', 555, 50)
+    print_text(f'Рекорд: {str(old_r)}', 570, 125)
+    print_text(f'Очки: {str(s)}', 580, 175)
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
-    
 
-all_sprites = sprite.Group()
+
+monitors = get_monitors()
+for i in range(len(monitors)):
+    if monitors[i].is_primary:
+        size_monitor = [monitors[i].width, monitors[i].height]
+        break
+
+
 with open('save_records.txt') as f:
     saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
     indexx = int(f.readline())
+
+
+resize_window()
+all_sprites = sprite.Group()
 check_bar_list = ['', '', '', '']
 check_bar_list[indexx] = '•'
+current_size = window.get_size()
 menu('menu')
 
 while True:
     clock.tick(framerate)
-    for even_t in event.get():
+    events = event.get()
+
+    for even_t in events:
+        if WINDOWMAXIMIZED == even_t.type:
+            check_maximized = True
+        if WINDOWRESIZED == even_t.type:
+            check_maximized = False
+            if not is_fullscreen:
+                to_fullscreen = False
+            
+
         if even_t.type == QUIT:
-            quit()
-            exit()
+            go_exit()
+        elif even_t.type == VIDEORESIZE and not check_maximized and not to_fullscreen:
+            current_size = even_t.size
+            resize_window(current_size)
+        elif even_t.type == VIDEORESIZE and check_maximized:
+            current_size = even_t.size
+            resize_window(current_size, True)
+        
 
     if mouse.get_pressed()[0]:
         k_x, k_y = mouse.get_pos()
@@ -285,5 +366,6 @@ while True:
         regulation()
     elif run_status == 'settings':
         settings()
+
     
     display.flip()
