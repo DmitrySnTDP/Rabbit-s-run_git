@@ -7,21 +7,17 @@ from screeninfo import get_monitors
 
 last_size = (1280, 720)
 rabbit = None
-diff_coef = scale = 1
+scale = 1
 framerate = 45
-last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = k_x = k_y = 0
-check_mouse_on_button = check_mouse_click_button = is_fullscreen = check_maximized = to_fullscreen = False
+last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = 0
+check_mouse_on_button = check_mouse_click_button = check_maximized = to_fullscreen = is_fullscreen = False
 last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 init()
 mixer.init()
-mixer.set_num_channels(2)
+mixer.set_num_channels(3)
 window = display.set_mode((1280, 720))
 display.set_caption('Кроличий побег')
 clock = time.Clock()
-
-fone = image.load('image/foneHD.png')
-fone_menu = image.load('image/foneHD_blur.png')
-rabbit_img = image.load('image/rabbit1.png')
 
 rabbit_pick_up = 'rabbit_pick_up.wav'
 on_button = 'on_button.wav'
@@ -52,11 +48,11 @@ class Button:
                 self.fone.set_alpha(150)
                 if not check_mouse_on_button:
                     check_mouse_on_button = True
-                    play_sound(on_button, 1)
+                    play_sound(on_button, 0)
                     last_coords_mouse = [x, y, self.width, self.height]
 
                 if click[0] and command != None and (not check_mouse_click_button):
-                    play_sound(click_button, 1)
+                    play_sound(click_button, 0)
                     check_mouse_click_button = True
                     last_coords_click_but = [x, y, self.width, self.height]
 
@@ -110,25 +106,28 @@ def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', 
 
 
 def fullscreen():
-    global scale, window, is_fullscreen, last_scale, to_fullscreen
+    global scale, window, is_fullscreen, last_scale, to_fullscreen, on_fullscreen
     
-    if not is_fullscreen:
-        to_fullscreen = is_fullscreen = True
+    if (not is_fullscreen):
+        to_fullscreen = is_fullscreen = on_fullscreen = True
         last_scale = scale
         scale = size_monitor[0] / 1280
         window = display.set_mode((int(1280 * scale), int(720 * scale)), FULLSCREEN)
     else:
         scale = last_scale
-        is_fullscreen = False
+        is_fullscreen = on_fullscreen = False
         window = display.set_mode((int(1280 * scale), int(720 * scale)), RESIZABLE)
+    write_save()
     transform_img()
 
 
 def resize_window(size = (1280, 720), vres = False):
     global window, scale, last_scale
     last_scale = scale
-    if size[0] < 480:
-        scale = 480 / 1280
+    if size[0] / 1280 < scale and size[1] / 720 < scale:
+        scale = min(size[0] / 1280, size[1] / 720)
+    elif size[0] / 1280 > scale and size[1] / 720 > scale:
+        scale = max(size[0] / 1280, size[1] / 720)
     else:
         scale = size[0] / 1280
 
@@ -149,6 +148,7 @@ def transform_img():
             
 
 def go_exit():
+    write_save()
     quit()
     exit()
 
@@ -184,10 +184,10 @@ def settings(run_s = None):
     check_run(run_s, indexx)
     window.blit(fone_menu, (0, 0))
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
-    Button(75).draw(283, 100, 'Легко', change,  '0.75')
-    Button(180).draw(227, 175, 'По умолчанию', change, '1')
-    Button(100).draw(268, 250, 'Средне', change, '1.25')
-    Button(100).draw(270, 325, 'Сложно', change, '1.5')
+    Button(75).draw(283, 100, 'Легко', change,  0.75)
+    Button(180).draw(227, 175, 'По умолчанию', change, 1)
+    Button(100).draw(268, 250, 'Средне', change, 1.25)
+    Button(100).draw(270, 325, 'Сложно', change, 1.5)
     Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
     Button(175).draw(920, 100, 'Полный экран', fullscreen)
     print_text(check_bar_list[0], 265, 90, font_size = 50)
@@ -227,7 +227,8 @@ def del_save():
     with open('save_records.txt','w') as saves_w:
         for i in range(4):
             saves_w.write(f'0|0|0\n')
-        saves_w.write(str(indexx))
+        saves_w.write(f'{(diff_coef)}\n')
+        saves_w.write(f'{int(on_fullscreen)}')
 
 
 def write_save():
@@ -235,21 +236,22 @@ def write_save():
         for saves_new in saves_old:
             saves1.write(f'{saves_new[0]}|{saves_new[1]}|{saves_new[2]}\n')
 
-        saves1.write(str(indexx))
+        saves1.write(f'{diff_coef}\n')
+        saves1.write(f'{int(on_fullscreen)}\n')
 
 
 def change(k):
     global diff_coef, indexx, last_edit_difficult_s, last_edit_difficult_m, check_bar_list
 
-    diff_coef = float(k)
+    diff_coef = k
     check_bar_list = ['', '', '', '']
-    if k == '0.75':
+    if k == 0.75:
         indexx = 0
-    elif k == '1':
+    elif k == 1:
         indexx = 1
-    elif k == '1.25':
+    elif k == 1.25:
         indexx = 2
-    elif k == '1.5':
+    elif k == 1.5:
         indexx = 3
 
     write_save()
@@ -276,14 +278,14 @@ def game():
     window.blit(fone, (0,0))
     print_text(str(s), 612, 25, font_size = 40)
     window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (display.get_window_size()[0], 25))
-    check = False
+    check_catch_rabb = False
 
     if rabbit.rect.x >= 1330 * scale:
-        check = True
+        check_catch_rabb = True
         start = datetime.now().strftime('%S.%f')
 
-    elif rabbit.rect.x <= k_x and rabbit.rect.x + 100 >= k_x and rabbit.rect.y <= k_y and rabbit.rect.y + 100 >= k_y:
-        check = True
+    elif rabbit.rect.x <= k_x and rabbit.rect.x + (100 * scale) >= k_x and rabbit.rect.y <= k_y and rabbit.rect.y + (100 * scale) >= k_y:
+        check_catch_rabb = True
         play_sound(rabbit_pick_up, 1)
         end = datetime.now().strftime('%S.%f')
         times = (float(end) - float(start)) * diff_coef
@@ -297,20 +299,19 @@ def game():
         elif times <= 1.0: s += 10
         else: s += 5
     
-    if check:
+    if check_catch_rabb:
         if n < max_n:
             n += 1
             rabbit = Rabbit()
             all_sprites = sprite.Group()
             all_sprites.add(rabbit)
+        else:
+            run_status = 'game_over'
 
-    if n == max_n:
-        run_status = 'game_over'
-
-        old_r = saves_old[indexx][(n // 25) - 1]
-        if s >= saves_old[indexx][(n // 25) - 1]:
-            saves_old[indexx][(n // 25 - 1)] = s
-        write_save()
+            old_r = saves_old[indexx][(n // 25) - 1]
+            if s >= saves_old[indexx][(n // 25) - 1]:
+                saves_old[indexx][(n // 25 - 1)] = s
+            write_save()
 
     k_x = k_y = 0
 
@@ -332,21 +333,26 @@ for i in range(len(monitors)):
 
 with open('save_records.txt') as f:
     saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
-    indexx = int(f.readline())
+    diff_coef = float(f.readline())
+    on_fullscreen = int(f.readline())
 
 
-resize_window()
 all_sprites = sprite.Group()
-check_bar_list = ['', '', '', '']
-check_bar_list[indexx] = '•'
-current_size = window.get_size()
+
+if on_fullscreen:
+    fullscreen()
+else:
+    resize_window()
+
+change(diff_coef)
 menu('menu')
+current_size = window.get_size()
+
 
 while True:
     clock.tick(framerate)
-    events = event.get()
 
-    for even_t in events:
+    for even_t in event.get():
         if WINDOWMAXIMIZED == even_t.type:
             check_maximized = True
         if WINDOWRESIZED == even_t.type:
@@ -354,7 +360,6 @@ while True:
             if not is_fullscreen:
                 to_fullscreen = False
             
-
         if even_t.type == QUIT:
             go_exit()
         elif even_t.type == VIDEORESIZE and not check_maximized and not to_fullscreen:
