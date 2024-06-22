@@ -6,9 +6,10 @@ from sys import exit
 from screeninfo import get_monitors
 
 last_size = (1280, 720)
+rabbit = None
 diff_coef = scale = 1
 framerate = 45
-last_edit_difficult = last_del_save = k_x = k_y = 0
+last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = k_x = k_y = 0
 check_mouse_on_button = check_mouse_click_button = is_fullscreen = check_maximized = to_fullscreen = False
 last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 init()
@@ -86,7 +87,13 @@ class Rabbit(sprite.Sprite):
         self.speed = randint(22, 30) * diff_coef * scale
         self.image = rabbit_img
         self.rect = self.image.get_rect()
-        self.rect.center = (int(-50 * scale), int((525 + randint(0, 95)) * scale))
+        self.rect.center = (-50 * scale, (525 + randint(0, 95)) * scale)
+    
+    def resize(self):
+        self.image = transform.scale(image.load('image/rabbit1.png'), (int(100 * scale), int(95 * scale)))
+        rabbit.speed = rabbit.speed / last_scale * scale
+        rabbit.rect.x = rabbit.rect.x / last_scale * scale
+        rabbit.rect.y = rabbit.rect.y / last_scale * scale
 
     def update(self):
         self.rect.x += self.speed
@@ -118,8 +125,8 @@ def fullscreen():
 
 
 def resize_window(size = (1280, 720), vres = False):
-    global window, scale
-
+    global window, scale, last_scale
+    last_scale = scale
     if size[0] < 480:
         scale = 480 / 1280
     else:
@@ -131,12 +138,15 @@ def resize_window(size = (1280, 720), vres = False):
 
 
 def transform_img():
-    global fone, fone_menu, rabbit_img
-
+    global fone, fone_menu, rabbit_img, rabbit
+    
     fone = transform.scale(image.load('image/foneHD.png'), (int(1280 * scale), int(720 * scale)))
     fone_menu = transform.scale(image.load('image/foneHD_blur.png'), (int(1280 * scale), int(720 * scale)))
     rabbit_img =  transform.scale(image.load('image/rabbit1.png'), (int(100 * scale), int(95 * scale)))
 
+    if rabbit != None:
+        rabbit.resize()
+            
 
 def go_exit():
     quit()
@@ -187,11 +197,12 @@ def settings(run_s = None):
 
     if is_fullscreen:
         print_text('•', 900, 90, font_size = 50)
-    now = float(datetime.now().strftime('%S.%f'))
+    now_s = float(datetime.now().strftime('%S.%f'))
+    now_m = float(datetime.now().strftime('%H.%M'))
 
-    if last_change != indexx and (now - last_edit_difficult) < 1.0:
+    if last_change != indexx and (now_s - last_edit_difficult_s) < 1.0 and now_m == last_edit_difficult_m:
         print_text('Сложность изменена!', 190, 475)
-    elif now - last_del_save < 1:
+    elif now_s - last_del_save_s < 1 and now_m == last_del_save_m:
         print_text('Сохранения сброшены!', 179, 475)
     elif last_change != indexx:
         last_change = indexx
@@ -207,10 +218,11 @@ def check_run(run_s, last_c = None):
 
 
 def del_save():
-    global saves_old, last_del_save
+    global saves_old, last_del_save_s, last_del_save_m
 
     saves_old = [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
-    last_del_save = float(datetime.now().strftime('%S.%f'))
+    last_del_save_s = float(datetime.now().strftime('%S.%f'))
+    last_del_save_m = float(datetime.now().strftime('%H.%M'))
 
     with open('save_records.txt','w') as saves_w:
         for i in range(4):
@@ -227,7 +239,7 @@ def write_save():
 
 
 def change(k):
-    global diff_coef, indexx, last_edit_difficult, check_bar_list
+    global diff_coef, indexx, last_edit_difficult_s, last_edit_difficult_m, check_bar_list
 
     diff_coef = float(k)
     check_bar_list = ['', '', '', '']
@@ -242,7 +254,8 @@ def change(k):
 
     write_save()
     check_bar_list[indexx] = '•'
-    last_edit_difficult = float(datetime.now().strftime('%S.%f'))
+    last_edit_difficult_s = float(datetime.now().strftime('%S.%f'))
+    last_edit_difficult_m = float(datetime.now().strftime('%H.%M'))
 
 
 def go_game(lenn):
@@ -261,7 +274,8 @@ def game():
     global n, s, start, all_sprites, run_status, rabbit, old_r, k_y, k_x
 
     window.blit(fone, (0,0))
-    window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (612, 25))
+    print_text(str(s), 612, 25, font_size = 40)
+    window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (display.get_window_size()[0], 25))
     check = False
 
     if rabbit.rect.x >= 1330 * scale:
@@ -349,10 +363,12 @@ while True:
         elif even_t.type == VIDEORESIZE and check_maximized:
             current_size = even_t.size
             resize_window(current_size, True)
-        
-
-    if mouse.get_pressed()[0]:
-        k_x, k_y = mouse.get_pos()
+        elif even_t.type == KEYDOWN:
+            if key.get_pressed()[K_f]:
+                fullscreen()
+        elif even_t.type == MOUSEBUTTONDOWN:
+            if mouse.get_pressed()[0]:
+                k_x, k_y = mouse.get_pos()
 
     if run_status == 'menu':
         menu()
