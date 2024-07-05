@@ -5,19 +5,13 @@ from datetime import datetime
 from sys import exit
 from screeninfo import get_monitors
 
-last_size = (1280, 720)
+
 rabbit = None
-scale = 1
+resolutions_preset = ((426, 240), (640, 360), (854, 480), (1280, 720), (1920, 1080), (2560, 1440), (3840, 2160))
 framerate = 45
 last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = 0
-check_mouse_on_button = check_mouse_click_button = check_maximized = to_fullscreen = is_fullscreen = False
+check_mouse_on_button = check_mouse_click_button = check_maximized = to_fullscreen = is_fullscreen = resolutions_menu_check = False
 last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
-init()
-mixer.init()
-mixer.set_num_channels(3)
-window = display.set_mode((1280, 720))
-display.set_caption('Кроличий побег')
-clock = time.Clock()
 
 rabbit_pick_up = 'rabbit_pick_up.wav'
 on_button = 'on_button.wav'
@@ -145,7 +139,37 @@ def transform_img():
 
     if rabbit != None:
         rabbit.resize()
-            
+
+
+def counter_resolutions_presets():
+    global resolutions_count
+
+    resolutions_count = 1
+    while resolutions_count < len(resolutions_preset) and size_monitor[0] > resolutions_preset[resolutions_count - 1][0]:
+        resolutions_count += 1
+
+
+def gets_monitors():
+    global size_monitor
+    monitors = get_monitors()
+    for i in range(len(monitors)):
+        if monitors[i].is_primary:
+            size_monitor = [monitors[i].width, monitors[i].height]
+            break
+
+
+def resolutions_menu_on():
+    global resolutions_menu_check
+    resolutions_menu_check = True
+    counter_resolutions_presets()
+
+
+def resolutions_menu_off(size = None):
+    global resolutions_menu_check
+    resolutions_menu_check = False
+    if size != None:
+        resize_window(size)
+
 
 def go_exit():
     write_save()
@@ -165,7 +189,8 @@ def menu(run_s = None):
     print_text('Кроличий побег', 545, 50)
     print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150)
     print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225)
-    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)   
+    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)
+    print_text('v2.2.0_beta', 10, 695, (255, 255, 255), font_size = 12)
 
 
 def regulation(run_s = None):
@@ -190,6 +215,17 @@ def settings(run_s = None):
     Button(100).draw(270, 325, 'Сложно', change, 1.5)
     Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
     Button(175).draw(920, 100, 'Полный экран', fullscreen)
+
+    if resolutions_menu_check:
+        resolutions_menu_fone = Surface((180 * scale, 40 * (resolutions_count + 1) * scale))
+        resolutions_menu_fone.fill((255, 255, 255))
+        resolutions_menu_fone.set_alpha(100)
+        window.blit(resolutions_menu_fone, (920 * scale, 175 * scale))
+        Button(180).draw(920, 175, f'▲разрешение', resolutions_menu_off)
+        for c in range(resolutions_count):
+            Button(180).draw(920, 215 + c * 40, f'{resolutions_preset[c][0]}x{resolutions_preset[c][1]}', resolutions_menu_off, resolutions_preset[c])
+    else:
+        Button(180).draw(920, 175, f'▼разрешение', resolutions_menu_on)
     print_text(check_bar_list[0], 265, 90, font_size = 50)
     print_text(check_bar_list[1], 210, 165, font_size = 50)
     print_text(check_bar_list[2], 250, 240, font_size = 50)
@@ -224,20 +260,23 @@ def del_save():
     last_del_save_s = float(datetime.now().strftime('%S.%f'))
     last_del_save_m = float(datetime.now().strftime('%H.%M'))
 
-    with open('save_records.txt','w') as saves_w:
+    with open('save.txt','w') as saves_w:
         for i in range(4):
             saves_w.write(f'0|0|0\n')
+
         saves_w.write(f'{(diff_coef)}\n')
-        saves_w.write(f'{int(on_fullscreen)}')
+        saves_w.write(f'{int(on_fullscreen)}\n')
+        saves_w.write(f'{scale}\n')
 
 
 def write_save():
-    with open('save_records.txt', 'w') as saves1:
+    with open('save.txt', 'w') as saves1:
         for saves_new in saves_old:
             saves1.write(f'{saves_new[0]}|{saves_new[1]}|{saves_new[2]}\n')
 
         saves1.write(f'{diff_coef}\n')
         saves1.write(f'{int(on_fullscreen)}\n')
+        saves1.write(f'{scale}\n')
 
 
 def change(k):
@@ -324,29 +363,29 @@ def game_over():
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
 
 
-monitors = get_monitors()
-for i in range(len(monitors)):
-    if monitors[i].is_primary:
-        size_monitor = [monitors[i].width, monitors[i].height]
-        break
-
-
-with open('save_records.txt') as f:
+with open('save.txt') as f:
     saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
     diff_coef = float(f.readline())
     on_fullscreen = int(f.readline())
+    scale = float(f.readline())
 
-
+gets_monitors()
+init()
+mixer.init()
+mixer.set_num_channels(3)
+window = display.set_mode((int(1280 * scale), int(720 * scale)), RESIZABLE)
+display.set_caption('Кроличий побег')
+display.set_icon(image.load('image/rab.png'))
+clock = time.Clock()
 all_sprites = sprite.Group()
 
 if on_fullscreen:
     fullscreen()
 else:
-    resize_window()
+    transform_img()
 
 change(diff_coef)
 menu('menu')
-current_size = window.get_size()
 
 
 while True:
@@ -363,17 +402,17 @@ while True:
         if even_t.type == QUIT:
             go_exit()
         elif even_t.type == VIDEORESIZE and not check_maximized and not to_fullscreen:
-            current_size = even_t.size
-            resize_window(current_size)
+            resize_window(even_t.size)
         elif even_t.type == VIDEORESIZE and check_maximized:
-            current_size = even_t.size
-            resize_window(current_size, True)
+            resize_window(even_t.size, True)
         elif even_t.type == KEYDOWN:
             if key.get_pressed()[K_f]:
                 fullscreen()
         elif even_t.type == MOUSEBUTTONDOWN:
             if mouse.get_pressed()[0]:
                 k_x, k_y = mouse.get_pos()
+        elif even_t.type == WINDOWMOVED:
+            gets_monitors()
 
     if run_status == 'menu':
         menu()
@@ -387,6 +426,5 @@ while True:
         regulation()
     elif run_status == 'settings':
         settings()
-
     
     display.flip()
