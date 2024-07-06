@@ -208,7 +208,7 @@ def menu(run_s = None):
     print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150)
     print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225)
     print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)
-    print_text('v2.2.0_beta', 10, 695, (255, 255, 255), font_size = 12)
+    print_text('v2.2.0', 10, 695, (255, 255, 255), font_size = 12)
 
 
 def regulation(run_s = None):
