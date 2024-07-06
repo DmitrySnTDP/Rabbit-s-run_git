@@ -1,3 +1,3 @@
-0. menu sound
-1. rabbit sound
+0. interface sound
+1. game sound
 2. music

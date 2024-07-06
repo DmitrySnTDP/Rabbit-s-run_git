@@ -16,7 +16,10 @@ last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 rabbit_pick_up = 'rabbit_pick_up.wav'
 on_button = 'on_button.wav'
 click_button = 'click_button.wav'
-# music = 'music.wav'
+game_over_sound = 'game_over.mp3'
+menu_music = 'menu_music.mp3'
+game_music = 'game_music.mp3'
+
 
 class Button:
     global check_mouse_on_button
@@ -89,12 +92,12 @@ class Rabbit(sprite.Sprite):
         self.rect.x += self.speed
 
 
-def play_sound(sound,channel):
+def play_sound(sound, channel):
     mixer.Channel(channel).play(mixer.Sound(f'sounds/{sound}'))
+    
 
-
-def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30):
-    font_type = font.SysFont(font_type, int(font_size * scale))
+def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30, bold = False):
+    font_type = font.SysFont(font_type, int(font_size * scale), bold = bold)
     text = font_type.render(message, True, font_color)
     window.blit(text, (int(x * scale), int(y * scale)))
 
@@ -165,10 +168,25 @@ def resolutions_menu_on():
 
 
 def resolutions_menu_off(size = None):
-    global resolutions_menu_check
+    global resolutions_menu_check, is_fullscreen, on_fullscreen
     resolutions_menu_check = False
     if size != None:
         resize_window(size)
+        is_fullscreen = on_fullscreen = False
+
+
+def edit_volume(s):
+    global volume, interface_volume, game_volume, music_volume
+    num_volume, resize_volume = s
+    
+    if num_volume == 0:
+        volume = round(volume + resize_volume, 1)
+    elif num_volume == 1:
+        interface_volume = round(interface_volume + resize_volume, 1)
+    elif num_volume == 2:
+        game_volume = round(game_volume + resize_volume, 1)
+    elif num_volume == 3:
+        music_volume = round(music_volume + resize_volume, 1)
 
 
 def go_exit():
@@ -198,7 +216,7 @@ def regulation(run_s = None):
     window.blit(fone_menu, (0, 0))
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
     print_text('Суть игры в том, чтобы поймать как можно больше сбегающих с фермы кроликов.', 150, 285)
-    print_text('Они бегут друг за другом. За каждого пойманного кролика вы получаете от 5 до 150 очков,', 105, 335)
+    print_text('Они бегут друг за другом. За каждого пойманного кролика вы получаете от 10 до 150 очков,', 105, 335)
     print_text(' в зависимоти от времени, за которе вы его поймали. Во время небольшого побега сбегает', 100, 385)
     print_text('25 кроликов, во время среднего 50 кроликов, а во время большого 75 кроликов.', 167, 435)
 
@@ -213,26 +231,57 @@ def settings(run_s = None):
     Button(180).draw(227, 175, 'По умолчанию', change, 1)
     Button(100).draw(268, 250, 'Средне', change, 1.25)
     Button(100).draw(270, 325, 'Сложно', change, 1.5)
-    Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
-    Button(175).draw(920, 100, 'Полный экран', fullscreen)
-
-    if resolutions_menu_check:
-        resolutions_menu_fone = Surface((180 * scale, 40 * (resolutions_count + 1) * scale))
-        resolutions_menu_fone.fill((255, 255, 255))
-        resolutions_menu_fone.set_alpha(100)
-        window.blit(resolutions_menu_fone, (920 * scale, 175 * scale))
-        Button(180).draw(920, 175, f'▲разрешение', resolutions_menu_off)
-        for c in range(resolutions_count):
-            Button(180).draw(920, 215 + c * 40, f'{resolutions_preset[c][0]}x{resolutions_preset[c][1]}', resolutions_menu_off, resolutions_preset[c])
-    else:
-        Button(180).draw(920, 175, f'▼разрешение', resolutions_menu_on)
     print_text(check_bar_list[0], 265, 90, font_size = 50)
     print_text(check_bar_list[1], 210, 165, font_size = 50)
     print_text(check_bar_list[2], 250, 240, font_size = 50)
     print_text(check_bar_list[3], 250, 315, font_size = 50)
 
+    if resolutions_menu_check:
+        resolutions_menu_fone = Surface((180 * scale, 40 * (resolutions_count + 1) * scale))
+        resolutions_menu_fone.fill((255, 255, 255))
+        resolutions_menu_fone.set_alpha(100)
+        window.blit(resolutions_menu_fone, (500 * scale, 175 * scale))
+        Button(180).draw(500, 175, f'▲разрешение', resolutions_menu_off)
+        for c in range(resolutions_count):
+            Button(180).draw(500, 215 + c * 40, f'{resolutions_preset[c][0]}x{resolutions_preset[c][1]}', resolutions_menu_off, resolutions_preset[c])
+    else:
+        Button(180).draw(500, 175, f'▼разрешение', resolutions_menu_on)
+
+    if volume > 0:
+        Button(25).draw(800, 150, '-', edit_volume, (0, -0.1))
+    if volume < 1:
+        Button(25).draw(1200, 150, '+', edit_volume, (0, 0.1))
+    if interface_volume > 0:
+        Button(25).draw(800, 275, '-', edit_volume, (1, -0.1))
+    if interface_volume < 1:
+        Button(25).draw(1200, 275, '+', edit_volume, (1, 0.1))
+    if game_volume > 0:
+        Button(25).draw(800, 400, '-', edit_volume, (2, -0.1))
+    if game_volume < 1:
+        Button(25).draw(1200, 400, '+', edit_volume, (2, 0.1))
+    if music_volume > 0:
+        Button(25).draw(800, 525, '-', edit_volume, (3, -0.1))
+    if music_volume < 1:
+        Button(25).draw(1200, 525, '+', edit_volume, (3, 0.1))
+
+    print_text('общая громкость:', 900, 100)
+    print_text('•', 845 + (33 * volume * 10), 148, font_size = 50, bold = True)
+    print_text('——————————', 850, 150, font_size = 40, bold = True)
+    print_text('громкость интерфейса:', 900, 225)
+    print_text('•', 845 + (33 * interface_volume * 10), 273, font_size = 50, bold = True)
+    print_text('——————————', 850, 275, font_size = 40, bold = True)
+    print_text('громкость игры:', 900, 350)
+    print_text('•', 845 + (33 * game_volume * 10), 398, font_size = 50, bold = True)
+    print_text('——————————', 850, 400, font_size = 40, bold = True)
+    print_text('громкость музыки:', 900, 475)
+    print_text('•', 845 + (33 * music_volume * 10), 523, font_size = 50, bold = True)
+    print_text('——————————', 850, 525, font_size = 40, bold = True)
+
+    Button(175).draw(510, 100, 'Полный экран', fullscreen)
+    Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
+
     if is_fullscreen:
-        print_text('•', 900, 90, font_size = 50)
+        print_text('•', 490, 90, font_size = 50)
     now_s = float(datetime.now().strftime('%S.%f'))
     now_m = float(datetime.now().strftime('%H.%M'))
 
@@ -267,6 +316,7 @@ def del_save():
         saves_w.write(f'{(diff_coef)}\n')
         saves_w.write(f'{int(on_fullscreen)}\n')
         saves_w.write(f'{scale}\n')
+        saves_w.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
 
 
 def write_save():
@@ -277,6 +327,7 @@ def write_save():
         saves1.write(f'{diff_coef}\n')
         saves1.write(f'{int(on_fullscreen)}\n')
         saves1.write(f'{scale}\n')
+        saves1.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
 
 
 def change(k):
@@ -308,6 +359,7 @@ def go_game(lenn):
     n = s = 0
     max_n = lenn
     run_status = 'game'
+    mixer.Channel(2).fadeout(500)
     start = datetime.now().strftime('%S.%f')
 
 
@@ -332,11 +384,10 @@ def game():
 
         if times <= 0.1: s += 150
         elif times <= 0.25: s += 100
-        elif times <= 0.36: s += 75
-        elif times <= 0.5: s += 50
-        elif times <= 0.75: s += 25
-        elif times <= 1.0: s += 10
-        else: s += 5
+        elif times <= 0.5: s += 75
+        elif times <= 0.75: s += 50
+        elif times <= 1.0: s += 25
+        else: s += 10
     
     if check_catch_rabb:
         if n < max_n:
@@ -346,6 +397,7 @@ def game():
             all_sprites.add(rabbit)
         else:
             run_status = 'game_over'
+            play_sound(game_over_sound, 1)
 
             old_r = saves_old[indexx][(n // 25) - 1]
             if s >= saves_old[indexx][(n // 25) - 1]:
@@ -368,6 +420,8 @@ with open('save.txt') as f:
     diff_coef = float(f.readline())
     on_fullscreen = int(f.readline())
     scale = float(f.readline())
+    volume, interface_volume, game_volume, music_volume = map(float, f.readline().split('|'))
+
 
 gets_monitors()
 init()
@@ -414,17 +468,31 @@ while True:
         elif even_t.type == WINDOWMOVED:
             gets_monitors()
 
+    mixer.Channel(0).set_volume(interface_volume * volume)
+    mixer.Channel(1).set_volume(game_volume * volume)
+    mixer.Channel(2).set_volume(music_volume * volume)
+
     if run_status == 'menu':
+        if not mixer.Channel(2).get_busy():
+            play_sound(menu_music, 2)
         menu()
     elif run_status == 'game':
+        if not mixer.Channel(2).get_busy():
+            play_sound(game_music, 2)
         game()
         all_sprites.update()
         all_sprites.draw(window)
     elif run_status == 'game_over':
+        if mixer.Channel(2).get_busy():
+            mixer.Channel(2).fadeout(500)
         game_over()
     elif run_status == 'regulation':
+        if not mixer.Channel(2).get_busy():
+            play_sound(menu_music, 2)
         regulation()
     elif run_status == 'settings':
+        if not mixer.Channel(2).get_busy():
+            play_sound(menu_music, 2)
         settings()
     
     display.flip()
