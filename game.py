@@ -546,6 +546,6 @@ while True:
     else:
         fps_counter += 1
     
-    print_text(str(fps), 320, 15, (255, 255, 255))
+    print_text(str(fps), 1250, 10, (255, 255, 255), font_size = 22)
 
     display.flip()
