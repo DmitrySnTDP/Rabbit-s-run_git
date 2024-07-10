@@ -28,6 +28,7 @@ with open('save.txt') as f:
     on_fullscreen = int(f.readline())
     scale = float(f.readline())
     volume, interface_volume, game_volume, music_volume = map(float, f.readline().split('|'))
+    fps_print_check = int(f.readline())
 
 
 init()
@@ -162,7 +163,7 @@ def transform_img():
 
     if rabbit != None:
         rabbit.resize()
-    setings_text_blit()
+    settings_text_blit()
     settings_checkbar_blit()
 
 
@@ -212,6 +213,11 @@ def edit_volume(s):
     settings_checkbar_blit()
 
 
+def view_fps():
+    global fps_print_check
+    fps_print_check = not fps_print_check
+
+
 def go_exit():
     write_save()
     quit()
@@ -250,12 +256,12 @@ def settings(run_s = None):
         resolutions_menu_fone = Surface((180 * scale, 40 * (resolutions_count + 1) * scale))
         resolutions_menu_fone.fill((255, 255, 255))
         resolutions_menu_fone.set_alpha(100)
-        window.blit(resolutions_menu_fone, (500 * scale, 175 * scale))
-        Button(180).draw(500, 175, f'▲разрешение', resolutions_menu_off)
+        window.blit(resolutions_menu_fone, (500 * scale, 250 * scale))
+        Button(180).draw(500, 250, f'▲разрешение', resolutions_menu_off)
         for c in range(resolutions_count):
-            Button(180).draw(500, 215 + c * 40, f'{resolutions_preset[c][0]}x{resolutions_preset[c][1]}', resolutions_menu_off, resolutions_preset[c])
+            Button(180).draw(500, 290 + c * 40, f'{resolutions_preset[c][0]}x{resolutions_preset[c][1]}', resolutions_menu_off, resolutions_preset[c])
     else:
-        Button(180).draw(500, 175, f'▼разрешение', resolutions_menu_on)
+        Button(180).draw(500, 250, f'▼разрешение', resolutions_menu_on)
 
     if volume > 0:
         Button(25).draw(800, 150, '-', edit_volume, (0, -0.1))
@@ -274,11 +280,15 @@ def settings(run_s = None):
     if music_volume < 1:
         Button(25).draw(1200, 525, '+', edit_volume, (3, 0.1))
 
-    Button(175).draw(510, 100, 'Полный экран', fullscreen)
+    Button(175).draw(510, 175, 'Полный экран', fullscreen)
+    Button(150).draw(520, 100, 'счётчик FPS', view_fps)
     Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
 
+    if fps_print_check:
+        print_text('•', 500, 90, font_size = 50)
     if is_fullscreen:
-        print_text('•', 490, 90, font_size = 50)
+        print_text('•', 490, 165, font_size = 50)
+    
     now_s = float(datetime.now().strftime('%S.%f'))
     now_m = float(datetime.now().strftime('%H.%M'))
 
@@ -317,6 +327,7 @@ def del_save():
         saves_w.write(f'{int(on_fullscreen)}\n')
         saves_w.write(f'{scale}\n')
         saves_w.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
+        saves_w.write(f'{int(fps_print_check)}\n')
 
 
 def write_save():
@@ -329,6 +340,7 @@ def write_save():
         saves1.write(f'{int(on_fullscreen)}\n')
         saves1.write(f'{scale}\n')
         saves1.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
+        saves1.write(f'{int(fps_print_check)}\n')
 
 
 def change(k):
@@ -345,7 +357,7 @@ def change(k):
         indexx = 3
 
     write_save()
-    setings_text_blit()
+    settings_text_blit()
     settings_checkbar_blit()
     last_edit_difficult_s = float(datetime.now().strftime('%S.%f'))
     last_edit_difficult_m = float(datetime.now().strftime('%H.%M'))
@@ -422,9 +434,9 @@ def menu_text_blit():
     print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150, window_blit = menu_text)
     print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225, window_blit = menu_text)
     print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300, window_blit = menu_text)
-    print_text('v2.2.1_beta', 10, 695, (255, 255, 255), font_size = 12, window_blit = menu_text)
+    print_text('v2.2.1', 10, 695, (255, 255, 255), font_size = 12, window_blit = menu_text)
 
-def setings_text_blit():
+def settings_text_blit():
     global settings_text
     settings_text = Surface((1280 * scale, 720 * scale))
     settings_text.blit(fone_menu, (0, 0))
@@ -479,7 +491,7 @@ else:
     transform_img()
 
 menu_text_blit()
-setings_text_blit()
+settings_text_blit()
 settings_checkbar_blit()
 regulation_blit()
 change(diff_coef)
@@ -506,6 +518,10 @@ while True:
         elif even_t.type == KEYDOWN:
             if key.get_pressed()[K_f]:
                 fullscreen()
+                menu_text_blit()
+                settings_checkbar_blit()
+                settings_text_blit()
+                regulation_blit()
         elif even_t.type == MOUSEBUTTONDOWN:
             if mouse.get_pressed()[0]:
                 k_x, k_y = mouse.get_pos()
@@ -546,6 +562,7 @@ while True:
     else:
         fps_counter += 1
     
-    print_text(str(fps), 1250, 10, (255, 255, 255), font_size = 22)
+    if fps_print_check:
+        print_text(str(fps), 1250, 10, (255, 255, 255), font_size = 22)
 
     display.flip()
