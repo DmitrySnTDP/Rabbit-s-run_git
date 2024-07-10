@@ -1,15 +1,15 @@
 from pygame import *
-# init, display, time, image, mouse, Surface, sprite, font, event, mixer, QUIT, quit
 from random import randint
 from datetime import datetime
 from sys import exit
 from screeninfo import get_monitors
 
-
+framerate_time_control = (float(datetime.now().strftime('%S')), int(datetime.now().strftime('%M')))
+check_bar_difficult_coords = ((265, 90), (210, 165), (250, 240), (250, 315))
 rabbit = None
 resolutions_preset = ((426, 240), (640, 360), (854, 480), (1280, 720), (1920, 1080), (2560, 1440), (3840, 2160))
-framerate = 45
-last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = 0
+framerate = fps = 60
+last_edit_difficult_s = last_edit_difficult_m = last_del_save_s = last_del_save_m = fps_counter = 0
 check_mouse_on_button = check_mouse_click_button = check_maximized = to_fullscreen = is_fullscreen = resolutions_menu_check = False
 last_coords_mouse = last_coords_click_but = [0, 0, 0, 0]
 
@@ -19,6 +19,26 @@ click_button = 'click_button.wav'
 game_over_sound = 'game_over.mp3'
 menu_music = 'menu_music.mp3'
 game_music = 'game_music.mp3'
+
+
+with open('save.txt') as f:
+    saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
+    diff_coef = float(f.readline())
+    indexx = int(f.readline())
+    on_fullscreen = int(f.readline())
+    scale = float(f.readline())
+    volume, interface_volume, game_volume, music_volume = map(float, f.readline().split('|'))
+
+
+init()
+event.set_allowed([QUIT, WINDOWMAXIMIZED, WINDOWRESIZED, WINDOWMOVED, VIDEORESIZE])
+mixer.init()
+mixer.set_num_channels(3)
+window = display.set_mode((int(1280 * scale), int(720 * scale)), RESIZABLE)
+display.set_caption('Кроличий побег')
+display.set_icon(image.load('image/rab.png'))
+clock = time.Clock()
+all_sprites = sprite.Group()
 
 
 class Button:
@@ -77,7 +97,7 @@ class Rabbit(sprite.Sprite):
         sprite.Sprite.__init__(self)
         global diff_coef
 
-        self.speed = randint(22, 30) * diff_coef * scale
+        self.speed = int(randint(22, 30) * diff_coef * scale * 45 / fps)
         self.image = rabbit_img
         self.rect = self.image.get_rect()
         self.rect.center = (-50 * scale, (525 + randint(0, 95)) * scale)
@@ -96,10 +116,10 @@ def play_sound(sound, channel):
     mixer.Channel(channel).play(mixer.Sound(f'sounds/{sound}'))
     
 
-def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30, bold = False):
+def print_text(message, x , y, font_color = (255, 255, 0), font_type = 'Arial', font_size = 30, bold = False, window_blit = window):
     font_type = font.SysFont(font_type, int(font_size * scale), bold = bold)
     text = font_type.render(message, True, font_color)
-    window.blit(text, (int(x * scale), int(y * scale)))
+    window_blit.blit(text, (int(x * scale), int(y * scale)))
 
 
 def fullscreen():
@@ -142,6 +162,8 @@ def transform_img():
 
     if rabbit != None:
         rabbit.resize()
+    setings_text_blit()
+    settings_checkbar_blit()
 
 
 def counter_resolutions_presets():
@@ -187,6 +209,7 @@ def edit_volume(s):
         game_volume = round(game_volume + resize_volume, 1)
     elif num_volume == 3:
         music_volume = round(music_volume + resize_volume, 1)
+    settings_checkbar_blit()
 
 
 def go_exit():
@@ -197,44 +220,31 @@ def go_exit():
 
 def menu(run_s = None):
     check_run(run_s)
-    window.blit(fone_menu, (0, 0))
+    window.blit(menu_text, (0, 0))
     Button(217).draw(210, 150,'Небольшой побег', go_game, 25)
     Button(185).draw(225, 225, 'Средний побег', go_game, 50)
     Button(187).draw(225, 300, 'Большой побег', go_game, 75)
     Button(110).draw(902, 188, 'Правила', regulation, 'regulation')
     Button(132).draw(892, 265, 'Настройки', settings, 'settings')
     Button(85).draw(575, 450, 'Выход', go_exit)
-    print_text('Кроличий побег', 545, 50)
-    print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150)
-    print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225)
-    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300)
-    print_text('v2.2.0', 10, 695, (255, 255, 255), font_size = 12)
 
 
 def regulation(run_s = None):
     check_run(run_s)
-    window.blit(fone_menu, (0, 0))
+    window.blit(regulation_b, (0, 0))
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
-    print_text('Суть игры в том, чтобы поймать как можно больше сбегающих с фермы кроликов.', 150, 285)
-    print_text('Они бегут друг за другом. За каждого пойманного кролика вы получаете от 10 до 150 очков,', 105, 335)
-    print_text(' в зависимоти от времени, за которе вы его поймали. Во время небольшого побега сбегает', 100, 385)
-    print_text('25 кроликов, во время среднего 50 кроликов, а во время большого 75 кроликов.', 167, 435)
 
 
 def settings(run_s = None):
     global last_change
 
     check_run(run_s, indexx)
-    window.blit(fone_menu, (0, 0))
+    window.blit(settings_checkbars, (0, 0))
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
     Button(75).draw(283, 100, 'Легко', change,  0.75)
     Button(180).draw(227, 175, 'По умолчанию', change, 1)
     Button(100).draw(268, 250, 'Средне', change, 1.25)
     Button(100).draw(270, 325, 'Сложно', change, 1.5)
-    print_text(check_bar_list[0], 265, 90, font_size = 50)
-    print_text(check_bar_list[1], 210, 165, font_size = 50)
-    print_text(check_bar_list[2], 250, 240, font_size = 50)
-    print_text(check_bar_list[3], 250, 315, font_size = 50)
 
     if resolutions_menu_check:
         resolutions_menu_fone = Surface((180 * scale, 40 * (resolutions_count + 1) * scale))
@@ -264,19 +274,6 @@ def settings(run_s = None):
     if music_volume < 1:
         Button(25).draw(1200, 525, '+', edit_volume, (3, 0.1))
 
-    print_text('общая громкость:', 900, 100)
-    print_text('•', 845 + (33 * volume * 10), 148, font_size = 50, bold = True)
-    print_text('——————————', 850, 150, font_size = 40, bold = True)
-    print_text('громкость интерфейса:', 900, 225)
-    print_text('•', 845 + (33 * interface_volume * 10), 273, font_size = 50, bold = True)
-    print_text('——————————', 850, 275, font_size = 40, bold = True)
-    print_text('громкость игры:', 900, 350)
-    print_text('•', 845 + (33 * game_volume * 10), 398, font_size = 50, bold = True)
-    print_text('——————————', 850, 400, font_size = 40, bold = True)
-    print_text('громкость музыки:', 900, 475)
-    print_text('•', 845 + (33 * music_volume * 10), 523, font_size = 50, bold = True)
-    print_text('——————————', 850, 525, font_size = 40, bold = True)
-
     Button(175).draw(510, 100, 'Полный экран', fullscreen)
     Button(262).draw(185, 400, 'Сбросить сохранения', del_save)
 
@@ -298,6 +295,7 @@ def check_run(run_s, last_c = None):
 
     if run_s != None:
         run_status = run_s
+        menu_text_blit()
         if last_c != None:
             last_change = last_c
 
@@ -308,12 +306,14 @@ def del_save():
     saves_old = [[0,0,0], [0,0,0], [0,0,0], [0,0,0]]
     last_del_save_s = float(datetime.now().strftime('%S.%f'))
     last_del_save_m = float(datetime.now().strftime('%H.%M'))
+    menu_text_blit()
 
     with open('save.txt','w') as saves_w:
         for i in range(4):
             saves_w.write(f'0|0|0\n')
 
         saves_w.write(f'{(diff_coef)}\n')
+        saves_w.write(f'{indexx}\n')
         saves_w.write(f'{int(on_fullscreen)}\n')
         saves_w.write(f'{scale}\n')
         saves_w.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
@@ -325,16 +325,16 @@ def write_save():
             saves1.write(f'{saves_new[0]}|{saves_new[1]}|{saves_new[2]}\n')
 
         saves1.write(f'{diff_coef}\n')
+        saves1.write(f'{indexx}\n')
         saves1.write(f'{int(on_fullscreen)}\n')
         saves1.write(f'{scale}\n')
         saves1.write(f'{volume}|{interface_volume}|{game_volume}|{music_volume}\n')
 
 
 def change(k):
-    global diff_coef, indexx, last_edit_difficult_s, last_edit_difficult_m, check_bar_list
+    global diff_coef, indexx, last_edit_difficult_s, last_edit_difficult_m
 
     diff_coef = k
-    check_bar_list = ['', '', '', '']
     if k == 0.75:
         indexx = 0
     elif k == 1:
@@ -345,7 +345,8 @@ def change(k):
         indexx = 3
 
     write_save()
-    check_bar_list[indexx] = '•'
+    setings_text_blit()
+    settings_checkbar_blit()
     last_edit_difficult_s = float(datetime.now().strftime('%S.%f'))
     last_edit_difficult_m = float(datetime.now().strftime('%H.%M'))
 
@@ -357,6 +358,7 @@ def go_game(lenn):
     all_sprites = sprite.Group()
     all_sprites.add(rabbit)
     n = s = 0
+    game_blit()
     max_n = lenn
     run_status = 'game'
     mixer.Channel(2).fadeout(500)
@@ -366,9 +368,7 @@ def go_game(lenn):
 def game():
     global n, s, start, all_sprites, run_status, rabbit, old_r, k_y, k_x
 
-    window.blit(fone, (0,0))
-    print_text(str(s), 612, 25, font_size = 40)
-    window.blit(font.SysFont("Arial", 40).render(str(s) , True, (255,165,0)), (display.get_window_size()[0], 25))
+    window.blit(game_b, (0, 0))
     check_catch_rabb = False
 
     if rabbit.rect.x >= 1330 * scale:
@@ -388,6 +388,7 @@ def game():
         elif times <= 0.75: s += 50
         elif times <= 1.0: s += 25
         else: s += 10
+        game_blit()
     
     if check_catch_rabb:
         if n < max_n:
@@ -402,42 +403,85 @@ def game():
             old_r = saves_old[indexx][(n // 25) - 1]
             if s >= saves_old[indexx][(n // 25) - 1]:
                 saves_old[indexx][(n // 25 - 1)] = s
+            game_over_blit()
             write_save()
 
     k_x = k_y = 0
 
 
 def game_over():
-    window.blit(fone_menu, (0, 0))
-    print_text('Игра окончена', 555, 50)
-    print_text(f'Рекорд: {str(old_r)}', 570, 125)
-    print_text(f'Очки: {str(s)}', 580, 175)
+    window.blit(game_over_b, (0, 0))
     Button(95).draw(10, 10, 'В меню', menu, 'menu')
 
 
-with open('save.txt') as f:
-    saves_old = [list(map(int, f.readline().split('|'))) for i in range(4)]
-    diff_coef = float(f.readline())
-    on_fullscreen = int(f.readline())
-    scale = float(f.readline())
-    volume, interface_volume, game_volume, music_volume = map(float, f.readline().split('|'))
+def menu_text_blit():
+    global menu_text
+    menu_text = Surface((1280 * scale, 720 * scale))
+    menu_text.blit(fone_menu, (0, 0))
+    print_text('Кроличий побег', 545, 50, window_blit = menu_text)
+    print_text(f'Рекорд: {saves_old[indexx][0]}', 565, 150, window_blit = menu_text)
+    print_text(f'Рекорд: {saves_old[indexx][1]}', 565, 225, window_blit = menu_text)
+    print_text(f'Рекорд: {saves_old[indexx][2]}', 565, 300, window_blit = menu_text)
+    print_text('v2.2.1_beta', 10, 695, (255, 255, 255), font_size = 12, window_blit = menu_text)
+
+def setings_text_blit():
+    global settings_text
+    settings_text = Surface((1280 * scale, 720 * scale))
+    settings_text.blit(fone_menu, (0, 0))
+    print_text('общая громкость:', 900, 100, window_blit = settings_text)
+    print_text('——————————', 850, 150, font_size = 40, bold = True, window_blit = settings_text)
+    print_text('громкость интерфейса:', 900, 225, window_blit = settings_text)
+    print_text('——————————', 850, 275, font_size = 40, bold = True, window_blit = settings_text)
+    print_text('громкость игры:', 900, 350, window_blit = settings_text)
+    print_text('——————————', 850, 400, font_size = 40, bold = True, window_blit = settings_text)
+    print_text('громкость музыки:', 900, 475, window_blit = settings_text)
+    print_text('——————————', 850, 525, font_size = 40, bold = True, window_blit = settings_text)
+
+def settings_checkbar_blit():
+    global settings_checkbars
+    settings_checkbars = Surface((1280 * scale, 720 * scale))
+    settings_checkbars.blit(settings_text, (0, 0))
+    print_text('•', check_bar_difficult_coords[indexx][0], check_bar_difficult_coords[indexx][1], font_size = 50, window_blit = settings_checkbars)
+    print_text('•', 845 + (33 * volume * 10), 148, font_size = 50, bold = True, window_blit = settings_checkbars)
+    print_text('•', 845 + (33 * interface_volume * 10), 273, font_size = 50, bold = True, window_blit = settings_checkbars)
+    print_text('•', 845 + (33 * game_volume * 10), 398, font_size = 50, bold = True, window_blit = settings_checkbars)
+    print_text('•', 845 + (33 * music_volume * 10), 523, font_size = 50, bold = True, window_blit = settings_checkbars)
+
+def game_over_blit():
+    global game_over_b
+    game_over_b = Surface((1280 * scale, 720 * scale))
+    game_over_b.blit(fone_menu, (0, 0))
+    print_text('Игра окончена', 555, 50, window_blit = game_over_b)
+    print_text(f'Рекорд: {str(old_r)}', 570, 125, window_blit = game_over_b)
+    print_text(f'Очки: {str(s)}', 580, 175, window_blit = game_over_b)
+
+def regulation_blit():
+    global regulation_b
+    regulation_b = Surface((1280 * scale, 720 * scale))
+    regulation_b.blit(fone_menu, (0, 0))
+    print_text('Суть игры в том, чтобы поймать как можно больше сбегающих с фермы кроликов.', 150, 285, window_blit = regulation_b)
+    print_text('Они бегут друг за другом. За каждого пойманного кролика вы получаете от 10 до 150 очков,', 105, 335, window_blit = regulation_b)
+    print_text(' в зависимоти от времени, за которе вы его поймали. Во время небольшого побега сбегает', 100, 385, window_blit = regulation_b)
+    print_text('25 кроликов, во время среднего 50 кроликов, а во время большого 75 кроликов.', 167, 435, window_blit = regulation_b)
+    
+def game_blit():
+    global game_b
+    game_b = Surface((1280 * scale, 720 * scale))
+    game_b.blit(fone, (0,0))
+    print_text(str(s), 612, 25, font_size = 40, window_blit = game_b)
 
 
 gets_monitors()
-init()
-mixer.init()
-mixer.set_num_channels(3)
-window = display.set_mode((int(1280 * scale), int(720 * scale)), RESIZABLE)
-display.set_caption('Кроличий побег')
-display.set_icon(image.load('image/rab.png'))
-clock = time.Clock()
-all_sprites = sprite.Group()
 
 if on_fullscreen:
     fullscreen()
 else:
     transform_img()
 
+menu_text_blit()
+setings_text_blit()
+settings_checkbar_blit()
+regulation_blit()
 change(diff_coef)
 menu('menu')
 
@@ -494,5 +538,14 @@ while True:
         if not mixer.Channel(2).get_busy():
             play_sound(menu_music, 2)
         settings()
+
+    if (float(datetime.now().strftime('%S')) - framerate_time_control[0] >= 1 and int(datetime.now().strftime('%M')) == framerate_time_control[1]) or (float(datetime.now().strftime('%S')) + 60 - framerate_time_control[0] >= 1 and int(datetime.now().strftime('%M')) != framerate_time_control[1]):
+        framerate_time_control = (float(datetime.now().strftime('%S')), int(datetime.now().strftime('%M')))
+        fps = fps_counter + 1
+        fps_counter = 0
+    else:
+        fps_counter += 1
     
+    print_text(str(fps), 320, 15, (255, 255, 255))
+
     display.flip()
